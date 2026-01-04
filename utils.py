@@ -1,7 +1,8 @@
 import re
 import spacy
 
-_nlp = None  # lazy-loaded
+# spaCy model will be loaded lazily (Cloud-safe)
+_nlp = None
 
 
 def get_nlp():
@@ -10,25 +11,30 @@ def get_nlp():
         try:
             _nlp = spacy.load("en_core_web_sm")
         except Exception:
-            # Safe fallback for Streamlit Cloud
+            # Absolute safe fallback for Streamlit Cloud
             _nlp = spacy.blank("en")
     return _nlp
 
 
 OPINION_WORDS = {
     "best", "greatest", "dominant", "impressive",
-    "expected", "likely", "arguably", "superb"
+    "expected", "likely", "arguably", "excellent",
+    "superb", "fantastic"
 }
 
 
 def extract_sentences(text: str):
+    """
+    Split text into sentences safely.
+    Works even if spaCy model is unavailable.
+    """
     nlp = get_nlp()
     return [sent.text.strip() for sent in nlp(text).sents]
 
 
 def is_opinion(text: str) -> bool:
-    t = text.lower()
-    return any(word in t for word in OPINION_WORDS)
+    text = text.lower()
+    return any(word in text for word in OPINION_WORDS)
 
 
 def has_number(text: str) -> bool:
