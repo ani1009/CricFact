@@ -1,18 +1,20 @@
 import re
 import spacy
 
-# spaCy model will be loaded lazily (Cloud-safe)
-_nlp = None
+_nlp = None  # lazy-loaded, Streamlit Cloud safe
 
 
 def get_nlp():
     global _nlp
     if _nlp is None:
         try:
+            # Try loading full model
             _nlp = spacy.load("en_core_web_sm")
         except Exception:
-            # Absolute safe fallback for Streamlit Cloud
+            # Fallback: blank English + sentencizer
             _nlp = spacy.blank("en")
+            if "sentencizer" not in _nlp.pipe_names:
+                _nlp.add_pipe("sentencizer")
     return _nlp
 
 
@@ -25,16 +27,19 @@ OPINION_WORDS = {
 
 def extract_sentences(text: str):
     """
-    Split text into sentences safely.
-    Works even if spaCy model is unavailable.
+    Safely split text into sentences.
+    Works both with full spaCy model and blank fallback.
     """
+    if not text or not text.strip():
+        return []
+
     nlp = get_nlp()
-    return [sent.text.strip() for sent in nlp(text).sents]
+    doc = nlp(text)
+    return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
 
 
 def is_opinion(text: str) -> bool:
-    text = text.lower()
-    return any(word in text for word in OPINION_WORDS)
+    return any(word in text.lower() for word in OPINION_WORDS)
 
 
 def has_number(text: str) -> bool:
